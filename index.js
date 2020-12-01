@@ -1,7 +1,10 @@
 const less = require('less');
+const LessPluginAutoPrefix = require('less-plugin-autoprefix');
 const EventEmitter = require('events');
 const { Transform } = require('stream');
 const fs = require('fs');
+
+const autoprefixPlugin = new LessPluginAutoPrefix({ browsers: ['last 2 versions'] });
 
 class LessTransform extends Transform {
   constructor(cssPath) {
@@ -15,6 +18,7 @@ class LessTransform extends Transform {
         try {
           const res = await less.render(code, {
             paths: [process.cwd() + cssPath],
+            plugins: [autoprefixPlugin],
           });
           code = res.css;
         } catch (error) {
