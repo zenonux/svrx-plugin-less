@@ -1,0 +1,43 @@
+{
+  "name": "svrx-plugin-less",
+  "version": "0.0.1",
+  "description": "The svrx plugin for less",
+  "main": "index.js",
+  "keywords": [
+    "svrx",
+    "svrx-plugin",
+    "less"
+  ],
+  "engines": {
+    "svrx": ""
+  },
+  "author": "换个头像心好累",
+  "scripts": {
+    "start": "node ./example/start.js",
+    "test": "mocha",
+    "lint": "eslint \"**/*.js\"",
+    "lint:fix": "eslint \"**/*.js\" --fix",
+    "prepublishOnly": "npm run lint && npm run test"
+  },
+  "dependencies": {
+    "events": "^3.2.0",
+    "less": "^3.12.2"
+  },
+  "devDependencies": {
+    "@svrx/eslint-config": "^1.0.0",
+    "@svrx/util": "^1.1.4",
+    "eslint": "^6.2.0",
+    "husky": "^3.0.4",
+    "lint-staged": "^9.2.3",
+    "mocha": "^6.2.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": "eslint --fix"
+  },
+  "license": "MIT"
+}
