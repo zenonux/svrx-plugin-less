@@ -32,6 +32,11 @@
     "lint-staged": "^9.2.3",
     "mocha": "^6.2.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zenonux/svrx-plugin-less"
+  },
+  "homepage": "https://github.com/zenonux/svrx-plugin-less#readme",
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
