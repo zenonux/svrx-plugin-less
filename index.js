@@ -7,7 +7,7 @@ const fs = require('fs');
 const autoprefixPlugin = new LessPluginAutoPrefix({ browsers: ['last 2 versions'] });
 
 class LessTransform extends Transform {
-  constructor(cssPath, logger) {
+  constructor(cssPath, lessPath, logger) {
     super({
       transform(chunk, enc, callback) {
         this._chunkString.push(chunk.toString());
@@ -21,9 +21,9 @@ class LessTransform extends Transform {
             plugins: [autoprefixPlugin],
           });
           code = res.css;
-          logger.log('compile less success');
+          logger.log(`compile ${lessPath} success`);
         } catch (error) {
-          logger.error(error);
+          logger.error(`${lessPath}: ${error}`);
         }
         this.push(code);
         callback();
@@ -57,7 +57,7 @@ module.exports = {
             if (fs.existsSync(lessPath)) {
               const fileStream = fs.createReadStream(lessPath);
               if (isReadableStream(fileStream)) {
-                ctx.body = fileStream.pipe(new LessTransform(cssPath, logger));
+                ctx.body = fileStream.pipe(new LessTransform(cssPath, lessPath, logger));
               }
             }
           }
