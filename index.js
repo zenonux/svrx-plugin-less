@@ -37,6 +37,7 @@ async function buildAllLess(dir, logger) {
   } catch (e) {
     logger.error(`build all less file error ${e}`);
   }
+  process.exit();
 }
 
 function watchLess(dir, logger) {
@@ -59,7 +60,6 @@ module.exports = {
       const cssPath = config.get('path') || '/css';
       const dir = process.cwd() + cssPath;
       const isBuild = config.get('build') || false;
-
       if (isBuild) {
         buildAllLess(dir, logger);
         return;
