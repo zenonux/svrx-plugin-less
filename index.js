@@ -21,6 +21,7 @@ class LessTransform extends Transform {
             plugins: [autoprefixPlugin],
           });
           code = res.css;
+          logger.log('compile less success');
         } catch (error) {
           logger.error(error);
         }
