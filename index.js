@@ -7,7 +7,7 @@ const fs = require('fs');
 const autoprefixPlugin = new LessPluginAutoPrefix({ browsers: ['last 2 versions'] });
 
 class LessTransform extends Transform {
-  constructor(cssPath) {
+  constructor(cssPath, logger) {
     super({
       transform(chunk, enc, callback) {
         this._chunkString.push(chunk.toString());
@@ -22,13 +22,12 @@ class LessTransform extends Transform {
           });
           code = res.css;
         } catch (error) {
-          console.warn('LessTransform', error);
+          logger.error(error);
         }
         this.push(code);
         callback();
       },
     });
-
     this._chunkString = [];
   }
 }
@@ -38,14 +37,14 @@ function isReadableStream(test) {
   return test instanceof EventEmitter && typeof test.read === 'function';
 }
 
-function _transform(body, cssPath) {
+function _transform(body, cssPath, logger) {
   if (isReadableStream(body)) {
-    body = body.pipe(new LessTransform(cssPath));
+    body = body.pipe(new LessTransform(cssPath, logger));
   }
   return body;
 }
 
-async function onTransform(ctx, next, cssPath) {
+async function onTransform(ctx, next, cssPath, logger) {
   await next();
   if (/\.(css)($|\?)/.test(ctx.path)) {
     if (!ctx.body) {
@@ -54,7 +53,7 @@ async function onTransform(ctx, next, cssPath) {
     const lessPath = ctx.body.path.replace(/\.css/, '.less');
     if (fs.existsSync(lessPath)) {
       const fileStream = fs.createReadStream(lessPath);
-      ctx.body = _transform(fileStream, cssPath);
+      ctx.body = _transform(fileStream, cssPath, logger);
     }
   }
 }
@@ -64,11 +63,10 @@ module.exports = {
   configSchema: {},
   hooks: {
     // Ref: https://docs.svrx.io/en/plugin/contribution.html#server
-    async onCreate({ middleware, config }) {
+    async onCreate({ middleware, config, logger }) {
       const cssPath = config.get('path') || '/css';
-      const isBuild = config.get('build') || false;
       middleware.add('svrx-plugin-less', {
-        onRoute: (ctx, next) => onTransform(ctx, next, cssPath, isBuild),
+        onRoute: (ctx, next) => onTransform(ctx, next, cssPath, logger),
       });
     },
   },
