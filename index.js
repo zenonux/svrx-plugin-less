@@ -23,7 +23,7 @@ class LessTransform extends Transform {
           code = res.css;
           logger.log(`compile ${lessPath} success`);
         } catch (error) {
-          logger.error(`${lessPath}: ${error}`);
+          logger.error(`${lessPath} ${error}`);
         }
         this.push(code);
         callback();
