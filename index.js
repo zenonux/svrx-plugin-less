@@ -43,8 +43,9 @@ async function buildAllLess(dir, logger) {
 function watchLess(dir, logger) {
   const watcher = chokidar.watch(`${dir}/**/*.less`);
   watcher.on('change', (path) => {
-    // 下划线开头的less文件不编译
+    // 下划线开头的less文件不编译,会编译所有其他文件
     if (path.replace(/(.*\/)*([^.]+).*/ig, '$2').substr(0, 1) === '_') {
+      buildAllLess(dir, logger);
       return;
     }
     compileLess(path, dir, logger);
@@ -60,8 +61,8 @@ module.exports = {
       const cssPath = config.get('path') || '/css';
       const dir = process.cwd() + cssPath;
       const isBuild = config.get('build') || false;
+      await buildAllLess(dir, logger);
       if (isBuild) {
-        buildAllLess(dir, logger);
         return;
       }
       watchLess(dir, logger);
