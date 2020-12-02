@@ -2,6 +2,7 @@ const less = require('less');
 const LessPluginAutoPrefix = require('less-plugin-autoprefix');
 const fs = require('fs');
 const chokidar = require('chokidar');
+const readdirp = require('readdirp');
 
 async function compileLess(sourceFile, dir, logger) {
   const code = fs.readFileSync(sourceFile, 'utf-8');
@@ -18,6 +19,23 @@ async function compileLess(sourceFile, dir, logger) {
   } catch (e) {
     logger.error(`${sourceFile} ${e}`);
     return [e];
+  }
+}
+
+async function buildAllLess(dir, logger) {
+  const files = await readdirp.promise(dir, { fileFilter: '*.less' });
+  const compilePromises = files.map(async (entry) => {
+    const { fullPath } = entry;
+    if (fullPath.replace(/(.*\/)*([^.]+).*/ig, '$2').substr(0, 1) === '_') {
+      return;
+    }
+    await compileLess(fullPath, dir, logger);
+  });
+  try {
+    await Promise.all(compilePromises);
+    logger.log('build all less file success');
+  } catch (e) {
+    logger.error(`build all less file error ${e}`);
   }
 }
 
@@ -40,6 +58,12 @@ module.exports = {
     async onCreate({ config, logger }) {
       const cssPath = config.get('path') || '/css';
       const dir = process.cwd() + cssPath;
+      const isBuild = config.get('build') || false;
+
+      if (isBuild) {
+        buildAllLess(dir, logger);
+        return;
+      }
       watchLess(dir, logger);
     },
   },
