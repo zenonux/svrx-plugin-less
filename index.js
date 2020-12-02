@@ -1,41 +1,35 @@
 const less = require('less');
 const LessPluginAutoPrefix = require('less-plugin-autoprefix');
-const EventEmitter = require('events');
-const { Transform } = require('stream');
 const fs = require('fs');
+const chokidar = require('chokidar');
 
-const autoprefixPlugin = new LessPluginAutoPrefix({ browsers: ['last 2 versions'] });
-
-class LessTransform extends Transform {
-  constructor(cssPath, lessPath, logger) {
-    super({
-      transform(chunk, enc, callback) {
-        this._chunkString.push(chunk.toString());
-        callback();
-      },
-      async flush(callback) {
-        let code = this._chunkString.join('');
-        try {
-          const res = await less.render(code, {
-            paths: [process.cwd() + cssPath],
-            plugins: [autoprefixPlugin],
-          });
-          code = res.css;
-          logger.log(`compile ${lessPath} success`);
-        } catch (error) {
-          logger.error(`${lessPath} ${error}`);
-        }
-        this.push(code);
-        callback();
-      },
+async function compileLess(sourceFile, dir, logger) {
+  const code = fs.readFileSync(sourceFile, 'utf-8');
+  try {
+    const res = await less.render(code, {
+      paths: [dir],
+      plugins: [new LessPluginAutoPrefix({ browsers: ['last 2 versions'] })],
     });
-    this._chunkString = [];
+    const data = res.css;
+    logger.log(`compile ${sourceFile} success`);
+    const cssPath = sourceFile.replace(/\.less/g, '.css');
+    fs.writeFileSync(cssPath, data);
+    return [null, data];
+  } catch (e) {
+    logger.error(`${sourceFile} ${e}`);
+    return [e];
   }
 }
 
-function isReadableStream(test) {
-  // ducking type check
-  return test instanceof EventEmitter && typeof test.read === 'function';
+function watchLess(dir, logger) {
+  const watcher = chokidar.watch(`${dir}/**/*.less`);
+  watcher.on('change', (path) => {
+    // 下划线开头的less文件不编译
+    if (path.replace(/(.*\/)*([^.]+).*/ig, '$2').substr(0, 1) === '_') {
+      return;
+    }
+    compileLess(path, dir, logger);
+  });
 }
 
 module.exports = {
@@ -43,26 +37,10 @@ module.exports = {
   configSchema: {},
   hooks: {
     // Ref: https://docs.svrx.io/en/plugin/contribution.html#server
-    async onCreate({ middleware, config, logger }) {
+    async onCreate({ config, logger }) {
       const cssPath = config.get('path') || '/css';
-      middleware.add('svrx-plugin-less', {
-        onRoute: async (ctx, next) => {
-          await next();
-          if (/\.(css)($|\?)/.test(ctx.path)) {
-            if (!ctx.body) {
-              return;
-            }
-            const lessPath = ctx.body.path.replace(/\.css/, '.less');
-            // 同级目录下存在同名less文件，则返回编译后的less
-            if (fs.existsSync(lessPath)) {
-              const fileStream = fs.createReadStream(lessPath);
-              if (isReadableStream(fileStream)) {
-                ctx.body = fileStream.pipe(new LessTransform(cssPath, lessPath, logger));
-              }
-            }
-          }
-        },
-      });
+      const dir = process.cwd() + cssPath;
+      watchLess(dir, logger);
     },
   },
 };
