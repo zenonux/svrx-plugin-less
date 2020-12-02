@@ -12,7 +12,7 @@ async function compileLess(sourceFile, dir, logger) {
       plugins: [new LessPluginAutoPrefix({ browsers: ['last 2 versions'] })],
     });
     const data = res.css;
-    logger.log(`compile ${sourceFile} success`);
+    logger.log(`${sourceFile} compile success`);
     const cssPath = sourceFile.replace(/\.less/g, '.css');
     fs.writeFileSync(cssPath, data);
     return [null, data];
@@ -37,7 +37,6 @@ async function buildAllLess(dir, logger) {
   } catch (e) {
     logger.error(`build all less file error ${e}`);
   }
-  process.exit();
 }
 
 function watchLess(dir, logger) {
@@ -60,11 +59,7 @@ module.exports = {
     async onCreate({ config, logger }) {
       const cssPath = config.get('path') || '/css';
       const dir = process.cwd() + cssPath;
-      const isBuild = config.get('build') || false;
       await buildAllLess(dir, logger);
-      if (isBuild) {
-        return;
-      }
       watchLess(dir, logger);
     },
   },
