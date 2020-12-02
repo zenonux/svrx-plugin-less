@@ -14,7 +14,7 @@ The svrx plugin for less
 
 - 以`_`下划线开头命名的 less 文件修改时，不会被编译。
 - `@import`的 less 文件被修改时，不会自动编译引入该文件的所有 less 文件
-- 建议`_mixins.less`,`_variable.less`,`_base`方式命名需要导入的全局 less 文件，如修改此类文件，暂时可以通过`svrx -p 'less?build'`编译所有 less 文件
+- 建议`_mixins.less`,`_variable.less`,`_base`方式命名需要导入的全局 less 文件，如修改此类文件，暂时可以通过`svrx -p 'less?build=1'`编译所有 less 文件
 
 ### Via CLI
 
