@@ -9,7 +9,12 @@ The svrx plugin for less
 
 > Please make sure that you have installed [svrx](https://svrx.io/) already.
 
-寻找 css 目录下，与请求 css 同名的 less 文件并编译返回，支持 autoprefix，如果不存在同名 less 文件，则返回请求的 css 文件
+在`/css`目录下修改`.less`文件会自动生成`.css`文件，支持`autoprefix`
+注：
+
+- 以`_`下划线开头命名的 less 文件修改时，不会被编译。
+- `@import`的 less 文件被修改时，不会自动编译引入该文件的所有 less 文件
+- 建议`_mixins.less`,`_variable.less`,`_base`方式命名需要导入的全局 less 文件，如修改此类文件，暂时可以通过`svrx -p 'less?build'`编译所有 less 文件
 
 ### Via CLI
 
