@@ -38,27 +38,6 @@ function isReadableStream(test) {
   return test instanceof EventEmitter && typeof test.read === 'function';
 }
 
-function _transform(body, cssPath, logger) {
-  if (isReadableStream(body)) {
-    body = body.pipe(new LessTransform(cssPath, logger));
-  }
-  return body;
-}
-
-async function onTransform(ctx, next, cssPath, logger) {
-  await next();
-  if (/\.(css)($|\?)/.test(ctx.path)) {
-    if (!ctx.body) {
-      return;
-    }
-    const lessPath = ctx.body.path.replace(/\.css/, '.less');
-    if (fs.existsSync(lessPath)) {
-      const fileStream = fs.createReadStream(lessPath);
-      ctx.body = _transform(fileStream, cssPath, logger);
-    }
-  }
-}
-
 module.exports = {
   // Ref: https://docs.svrx.io/en/plugin/contribution.html#schema
   configSchema: {},
@@ -67,7 +46,22 @@ module.exports = {
     async onCreate({ middleware, config, logger }) {
       const cssPath = config.get('path') || '/css';
       middleware.add('svrx-plugin-less', {
-        onRoute: (ctx, next) => onTransform(ctx, next, cssPath, logger),
+        onRoute: async (ctx, next) => {
+          await next();
+          if (/\.(css)($|\?)/.test(ctx.path)) {
+            if (!ctx.body) {
+              return;
+            }
+            const lessPath = ctx.body.path.replace(/\.css/, '.less');
+            // 同级目录下存在同名less文件，则返回编译后的less
+            if (fs.existsSync(lessPath)) {
+              const fileStream = fs.createReadStream(lessPath);
+              if (isReadableStream(fileStream)) {
+                ctx.body = fileStream.pipe(new LessTransform(cssPath, logger));
+              }
+            }
+          }
+        },
       });
     },
   },
