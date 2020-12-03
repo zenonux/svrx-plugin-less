@@ -1,11 +1,15 @@
 const less = require('less');
 const LessPluginAutoPrefix = require('less-plugin-autoprefix');
-const fs = require('fs');
 const chokidar = require('chokidar');
 const readdirp = require('readdirp');
+const fs = require('fs');
+
+function getFileNameNoSuffix(filePath) {
+  return filePath.replace(/(.*\/)*([^.]+).*/ig, '$2');
+}
 
 async function compileLess(sourceFile, dir, logger) {
-  const code = fs.readFileSync(sourceFile, 'utf-8');
+  const code = await fs.promises.readFile(sourceFile, 'utf-8');
   try {
     const res = await less.render(code, {
       paths: [dir],
@@ -14,7 +18,7 @@ async function compileLess(sourceFile, dir, logger) {
     const data = res.css;
     logger.log(`${sourceFile} compile success`);
     const cssPath = sourceFile.replace(/\.less/g, '.css');
-    fs.writeFileSync(cssPath, data);
+    await fs.promises.writeFile(cssPath, data);
     return [null, data];
   } catch (e) {
     logger.error(`${sourceFile} ${e}`);
@@ -23,27 +27,28 @@ async function compileLess(sourceFile, dir, logger) {
 }
 
 async function buildAllLess(dir, logger) {
-  const files = await readdirp.promise(dir, { fileFilter: '*.less' });
-  const compilePromises = files.map(async (entry) => {
+  const errors = [];
+  // eslint-disable-next-line no-restricted-syntax
+  for await (const entry of readdirp(dir, { fileFilter: '*.less' })) {
     const { fullPath } = entry;
-    if (fullPath.replace(/(.*\/)*([^.]+).*/ig, '$2').substr(0, 1) === '_') {
+    if (getFileNameNoSuffix(fullPath).charAt(0) === '_') {
       return;
     }
-    await compileLess(fullPath, dir, logger);
-  });
-  try {
-    await Promise.all(compilePromises);
+    const [err] = await compileLess(fullPath, dir, logger);
+    errors.push(err);
+  }
+  if (errors.length > 0) {
+    logger.error(`build all less file occurred ${errors.length} error`);
+  } else {
     logger.log('build all less file success');
-  } catch (e) {
-    logger.error(`build all less file error ${e}`);
   }
 }
 
 function watchLess(dir, logger) {
   const watcher = chokidar.watch(`${dir}/**/*.less`);
   watcher.on('change', (path) => {
-    // 下划线开头的less文件不编译,会编译所有其他文件
-    if (path.replace(/(.*\/)*([^.]+).*/ig, '$2').substr(0, 1) === '_') {
+    // 下划线开头的less文件不编译,会编译所有其他less文件
+    if (getFileNameNoSuffix(path).charAt(0) === '_') {
       buildAllLess(dir, logger);
       return;
     }
