@@ -31,9 +31,9 @@ svrx({ plugins: ["less"] }).start();
 
 ### **path \[String]:**
 
-指定 css 目录，默认值为`/css`
+指定 css 目录，默认值为`css`
 
-`svrx -p less?path=/css`
+`svrx -p less?path=css`
 
 ### **build \[String]:**
 

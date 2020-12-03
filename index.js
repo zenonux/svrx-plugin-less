@@ -3,6 +3,7 @@ const LessPluginAutoPrefix = require('less-plugin-autoprefix');
 const chokidar = require('chokidar');
 const readdirp = require('readdirp');
 const fs = require('fs');
+const path = require('path');
 
 function getFileNameNoSuffix(filePath) {
   return filePath.replace(/(.*\/)*([^.]+).*/ig, '$2');
@@ -32,7 +33,8 @@ async function buildAllLess(dir, logger) {
   for await (const entry of readdirp(dir, { fileFilter: '*.less' })) {
     const { fullPath } = entry;
     if (getFileNameNoSuffix(fullPath).charAt(0) === '_') {
-      return;
+      // eslint-disable-next-line no-continue
+      continue;
     }
     const [err] = await compileLess(fullPath, dir, logger);
     if (err) {
@@ -48,9 +50,9 @@ async function buildAllLess(dir, logger) {
 
 function watchLess(dir, logger) {
   const watcher = chokidar.watch(`${dir}/**/*.less`);
-  watcher.on('change', (path) => {
+  watcher.on('change', (filePath) => {
     // 下划线开头的less文件不编译,会编译所有其他less文件
-    if (getFileNameNoSuffix(path).charAt(0) === '_') {
+    if (getFileNameNoSuffix(filePath).charAt(0) === '_') {
       buildAllLess(dir, logger);
       return;
     }
@@ -64,9 +66,9 @@ module.exports = {
   hooks: {
     // Ref: https://docs.svrx.io/en/plugin/contribution.html#server
     async onCreate({ config, logger }) {
-      const cssPath = config.get('path') || '/css';
+      const cssPath = config.get('path') || 'css';
       const isBuild = config.get('build');
-      const dir = process.cwd() + cssPath;
+      const dir = path.join(process.cwd(), cssPath);
       if (typeof (isBuild) !== 'undefined') {
         await buildAllLess(dir, logger);
       }
