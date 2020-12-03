@@ -35,7 +35,9 @@ async function buildAllLess(dir, logger) {
       return;
     }
     const [err] = await compileLess(fullPath, dir, logger);
-    errors.push(err);
+    if (err) {
+      errors.push(err);
+    }
   }
   if (errors.length > 0) {
     logger.error(`build all less file occurred ${errors.length} error`);
