@@ -22,9 +22,9 @@ svrx -p less
 ### Via API
 
 ```js
-const svrx = require('@svrx/svrx')
+const svrx = require("@svrx/svrx");
 
-svrx({ plugins: ['less'] }).start()
+svrx({ plugins: ["less"] }).start();
 ```
 
 ## Options
@@ -32,6 +32,14 @@ svrx({ plugins: ['less'] }).start()
 ### **path \[String]:**
 
 指定 css 目录，默认值为`/css`
+
+`svrx -p less?path=/css`
+
+### **build \[String]:**
+
+启动插件时编译所有 less 文件
+
+`svrx -p less?build`
 
 ## License
 

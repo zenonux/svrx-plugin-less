@@ -58,8 +58,11 @@ module.exports = {
     // Ref: https://docs.svrx.io/en/plugin/contribution.html#server
     async onCreate({ config, logger }) {
       const cssPath = config.get('path') || '/css';
+      const isBuild = config.get('build');
       const dir = process.cwd() + cssPath;
-      await buildAllLess(dir, logger);
+      if (typeof (isBuild) !== 'undefined') {
+        await buildAllLess(dir, logger);
+      }
       watchLess(dir, logger);
     },
   },
