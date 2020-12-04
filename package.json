@@ -1,6 +1,6 @@
 {
   "name": "svrx-plugin-less",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "The svrx plugin for less",
   "main": "index.js",
   "keywords": [

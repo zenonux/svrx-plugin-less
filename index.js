@@ -56,7 +56,7 @@ function watchLess(dir, logger) {
       buildAllLess(dir, logger);
       return;
     }
-    compileLess(path, dir, logger);
+    compileLess(filePath, dir, logger);
   });
 }
 
