@@ -1,6 +1,6 @@
 {
   "name": "svrx-plugin-less",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "The svrx plugin for less",
   "main": "index.js",
   "keywords": [
@@ -23,7 +23,8 @@
     "chokidar": "^3.4.3",
     "less": "^3.12.2",
     "less-plugin-autoprefix": "^2.0.0",
-    "readdirp": "^3.5.0"
+    "readdirp": "^3.5.0",
+    "write": "^2.0.0"
   },
   "devDependencies": {
     "@svrx/eslint-config": "^1.0.0",

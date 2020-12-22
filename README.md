@@ -29,17 +29,27 @@ svrx({ plugins: ["less"] }).start();
 
 ## Options
 
-### **path \[String]:**
+### **src \[String]:**
 
-指定 css 目录，默认值为`css`
+指定 less 目录，默认值为`css`
 
-`svrx -p less?path=css`
+`svrx -p less?src=css`
+
+### **dest \[String]:**
+
+指定 css 输出目录，默认值为`css`
+
+`svrx -p less?dest=css`
 
 ### **build \[String]:**
 
 启动插件时编译所有 less 文件
 
 `svrx -p less?build`
+
+## Changelog
+
+- v0.1.9:path 参数改为 src,新增 dest 参数，以便支持自定义 css 输出目录
 
 ## License
 

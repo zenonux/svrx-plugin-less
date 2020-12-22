@@ -4,22 +4,28 @@ const chokidar = require('chokidar');
 const readdirp = require('readdirp');
 const fs = require('fs');
 const path = require('path');
+const write = require('write');
 
 function getFileNameNoSuffix(filePath) {
   return filePath.replace(/(.*\/)*([^.]+).*/ig, '$2');
 }
 
-async function compileLess(sourceFile, dir, logger) {
+async function writeCssFile(code, sourceFile, srcFullPath, destFullPath) {
+  const relativePath = path.relative(srcFullPath, sourceFile);
+  const targetCssPath = path.join(destFullPath, relativePath).replace(/\.less/g, '.css');
+  await write(targetCssPath, code);
+}
+
+async function compileLess(sourceFile, srcFullPath, destFullPath, logger) {
   const code = await fs.promises.readFile(sourceFile, 'utf-8');
   try {
     const res = await less.render(code, {
-      paths: [dir],
+      paths: [srcFullPath],
       plugins: [new LessPluginAutoPrefix({ browsers: ['last 2 versions'] })],
     });
     const data = res.css;
+    await writeCssFile(data, sourceFile, srcFullPath, destFullPath);
     logger.log(`${sourceFile} compile success`);
-    const cssPath = sourceFile.replace(/\.less/g, '.css');
-    await fs.promises.writeFile(cssPath, data);
     return [null, data];
   } catch (e) {
     logger.error(`${sourceFile} ${e}`);
@@ -27,16 +33,16 @@ async function compileLess(sourceFile, dir, logger) {
   }
 }
 
-async function buildAllLess(dir, logger) {
+async function buildAllLess(srcFullPath, destFullPath, logger) {
   const errors = [];
   // eslint-disable-next-line no-restricted-syntax
-  for await (const entry of readdirp(dir, { fileFilter: '*.less' })) {
+  for await (const entry of readdirp(srcFullPath, { fileFilter: '*.less' })) {
     const { fullPath } = entry;
     if (getFileNameNoSuffix(fullPath).charAt(0) === '_') {
       // eslint-disable-next-line no-continue
       continue;
     }
-    const [err] = await compileLess(fullPath, dir, logger);
+    const [err] = await compileLess(fullPath, srcFullPath, destFullPath, logger);
     if (err) {
       errors.push(err);
     }
@@ -48,15 +54,15 @@ async function buildAllLess(dir, logger) {
   }
 }
 
-function watchLess(dir, logger) {
-  const watcher = chokidar.watch(`${dir}/**/*.less`);
+function watchLess(srcFullPath, destFullPath, logger) {
+  const watcher = chokidar.watch(`${srcFullPath}/**/*.less`);
   watcher.on('change', (filePath) => {
     // 下划线开头的less文件不编译,会编译所有其他less文件
     if (getFileNameNoSuffix(filePath).charAt(0) === '_') {
-      buildAllLess(dir, logger);
+      buildAllLess(srcFullPath, logger);
       return;
     }
-    compileLess(filePath, dir, logger);
+    compileLess(filePath, srcFullPath, destFullPath, logger);
   });
 }
 
@@ -66,13 +72,16 @@ module.exports = {
   hooks: {
     // Ref: https://docs.svrx.io/en/plugin/contribution.html#server
     async onCreate({ config, logger }) {
-      const cssPath = config.get('path') || 'css';
+      const srcPath = config.get('src') || 'css';
+      const destPath = config.get('dest') || 'css';
       const isBuild = config.get('build');
-      const dir = path.join(process.cwd(), cssPath);
+      const srcFullPath = path.join(process.cwd(), srcPath);
+      const destFullPath = path.join(process.cwd(), destPath);
+
       if (typeof (isBuild) !== 'undefined') {
-        await buildAllLess(dir, logger);
+        await buildAllLess(srcFullPath, destFullPath, logger);
       }
-      watchLess(dir, logger);
+      watchLess(srcFullPath, destFullPath, logger);
     },
   },
 };
