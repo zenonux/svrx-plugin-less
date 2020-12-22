@@ -59,7 +59,7 @@ function watchLess(srcFullPath, destFullPath, logger) {
   watcher.on('change', (filePath) => {
     // 下划线开头的less文件不编译,会编译所有其他less文件
     if (getFileNameNoSuffix(filePath).charAt(0) === '_') {
-      buildAllLess(srcFullPath, logger);
+      buildAllLess(srcFullPath, destFullPath, logger);
       return;
     }
     compileLess(filePath, srcFullPath, destFullPath, logger);
@@ -77,7 +77,6 @@ module.exports = {
       const isBuild = config.get('build');
       const srcFullPath = path.join(process.cwd(), srcPath);
       const destFullPath = path.join(process.cwd(), destPath);
-
       if (typeof (isBuild) !== 'undefined') {
         await buildAllLess(srcFullPath, destFullPath, logger);
       }
