@@ -49,6 +49,7 @@ svrx({ plugins: ["less"] }).start();
 
 ## Changelog
 
+- v0.1.11:优化以流的方式读写文件
 - v0.1.10:fix build all less error
 - v0.1.9:path 参数改为 src,新增 dest 参数，以便支持自定义 css 输出目录
 

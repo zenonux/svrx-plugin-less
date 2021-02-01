@@ -3,38 +3,61 @@ const LessPluginAutoPrefix = require('less-plugin-autoprefix');
 const chokidar = require('chokidar');
 const readdirp = require('readdirp');
 const fs = require('fs');
+const { Transform } = require('stream');
 const path = require('path');
 const write = require('write');
 
 function getFileNameNoSuffix(filePath) {
-  return filePath.replace(/(.*\/)*([^.]+).*/ig, '$2');
+  return filePath.replace(/(.*\/)*([^.]+).*/gi, '$2');
 }
 
-async function writeCssFile(code, sourceFile, srcFullPath, destFullPath) {
-  const relativePath = path.relative(srcFullPath, sourceFile);
-  const targetCssPath = path.join(destFullPath, relativePath).replace(/\.less/g, '.css');
-  await write(targetCssPath, code);
-}
-
-async function compileLess(sourceFile, srcFullPath, destFullPath, logger) {
-  const code = await fs.promises.readFile(sourceFile, 'utf-8');
-  try {
-    const res = await less.render(code, {
-      paths: [srcFullPath],
-      plugins: [new LessPluginAutoPrefix({ browsers: ['last 2 versions'] })],
+class LessTransform extends Transform {
+  constructor(sourceFile, srcFullPath, logger) {
+    super({
+      transform(chunk, enc, callback) {
+        this._chunkString.push(chunk.toString());
+        callback();
+      },
+      async flush(callback) {
+        let code = this._chunkString.join('');
+        try {
+          const res = await less.render(code, {
+            paths: [srcFullPath],
+            plugins: [new LessPluginAutoPrefix({ browsers: ['last 2 versions'] })],
+          });
+          code = res.css;
+          logger.log(`${sourceFile} compile success`);
+        } catch (error) {
+          logger.error(`${sourceFile} ${error}`);
+        }
+        this.push(code);
+        callback();
+      },
     });
-    const data = res.css;
-    await writeCssFile(data, sourceFile, srcFullPath, destFullPath);
-    logger.log(`${sourceFile} compile success`);
-    return [null, data];
-  } catch (e) {
-    logger.error(`${sourceFile} ${e}`);
-    return [e];
+    this._chunkString = [];
   }
 }
 
+function compileLessStream(filePath, srcFullPath, destFullPath, logger) {
+  const readStream = fs.createReadStream(filePath);
+  const transformPipe = new LessTransform(filePath, srcFullPath, logger);
+  const relativePath = path.relative(srcFullPath, filePath);
+  const targetCssPath = path
+    .join(destFullPath, relativePath)
+    .replace(/\.less/g, '.css');
+  const writePipe = write.stream(targetCssPath);
+  return readStream.pipe(transformPipe).pipe(writePipe);
+}
+
+function streamToPromise(stream) {
+  return new Promise(((resolve) => {
+    stream.on('close', () => {
+      resolve();
+    });
+  }));
+}
+
 async function buildAllLess(srcFullPath, destFullPath, logger) {
-  const errors = [];
   // eslint-disable-next-line no-restricted-syntax
   for await (const entry of readdirp(srcFullPath, { fileFilter: '*.less' })) {
     const { fullPath } = entry;
@@ -42,15 +65,12 @@ async function buildAllLess(srcFullPath, destFullPath, logger) {
       // eslint-disable-next-line no-continue
       continue;
     }
-    const [err] = await compileLess(fullPath, srcFullPath, destFullPath, logger);
-    if (err) {
-      errors.push(err);
-    }
-  }
-  if (errors.length > 0) {
-    logger.error(`build all less file occurred ${errors.length} error`);
-  } else {
-    logger.log('build all less file success');
+    await streamToPromise(compileLessStream(
+      fullPath,
+      srcFullPath,
+      destFullPath,
+      logger,
+    ));
   }
 }
 
@@ -62,7 +82,7 @@ function watchLess(srcFullPath, destFullPath, logger) {
       buildAllLess(srcFullPath, destFullPath, logger);
       return;
     }
-    compileLess(filePath, srcFullPath, destFullPath, logger);
+    compileLessStream(filePath, srcFullPath, destFullPath, logger);
   });
 }
 
@@ -77,7 +97,7 @@ module.exports = {
       const isBuild = config.get('build');
       const srcFullPath = path.join(process.cwd(), srcPath);
       const destFullPath = path.join(process.cwd(), destPath);
-      if (typeof (isBuild) !== 'undefined') {
+      if (typeof isBuild !== 'undefined') {
         await buildAllLess(srcFullPath, destFullPath, logger);
       }
       watchLess(srcFullPath, destFullPath, logger);
